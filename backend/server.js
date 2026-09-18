@@ -6,7 +6,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const mysql = require('mysql2/promise');
-const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 const Razorpay = require('razorpay');
 
 const app = express();
@@ -64,25 +64,46 @@ const verifyPassword = async (password, storedHash) => {
   return safeEqual(actual.split(':')[1], expected);
 };
 
-const emailTransport = process.env.SMTP_HOST ? nodemailer.createTransport({
-  host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 587), secure: process.env.SMTP_SECURE === 'true',
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000
-}) : null;
+// Gmail API (HTTPS, port 443) — used instead of SMTP because Render's free
+// tier blocks outbound traffic on SMTP ports 25, 465 and 587.
+const gmailConfigured = Boolean(
+  process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET && process.env.GMAIL_REFRESH_TOKEN
+);
+const gmailOAuthClient = gmailConfigured
+  ? new google.auth.OAuth2(process.env.GMAIL_CLIENT_ID, process.env.GMAIL_CLIENT_SECRET)
+  : null;
+if (gmailOAuthClient) {
+  gmailOAuthClient.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+}
+const gmailClient = gmailOAuthClient ? google.gmail({ version: 'v1', auth: gmailOAuthClient }) : null;
+
+function buildRawEmail({ from, to, subject, text }) {
+  const headers = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: =?UTF-8?B?${Buffer.from(subject, 'utf8').toString('base64')}?=`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: 7bit',
+    '',
+    text
+  ].join('\r\n');
+  return Buffer.from(headers).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
   ? new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET })
   : null;
 const reservationFeePaise = 200;
 
 async function sendAccountEmail(to, subject, text) {
-  if (!emailTransport) {
+  if (!gmailClient) {
     if (isProduction) throw new Error('Email delivery is not configured');
     console.warn(`Email delivery is not configured; development ${subject} email was not sent to ${to}`);
     return;
   }
-  await emailTransport.sendMail({ from: process.env.EMAIL_FROM, to, subject, text });
+  const raw = buildRawEmail({ from: process.env.EMAIL_FROM, to, subject, text });
+  await gmailClient.users.messages.send({ userId: 'me', requestBody: { raw } });
 }
 
 function requiredText(value, field, maxLength = 255) {
