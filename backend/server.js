@@ -66,7 +66,10 @@ const verifyPassword = async (password, storedHash) => {
 
 const emailTransport = process.env.SMTP_HOST ? nodemailer.createTransport({
   host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 587), secure: process.env.SMTP_SECURE === 'true',
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD }
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000
 }) : null;
 const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
   ? new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET })
@@ -157,9 +160,11 @@ app.post('/api/auth/register', authLimiter, async (request, response) => {
     const token = newToken();
     await pool.execute('INSERT INTO email_verification_tokens (token_hash, user_id, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))', [hashToken(token), result.insertId]);
     const verificationUrl = `${process.env.PUBLIC_APP_URL || ''}/verify-email?token=${token}`;
-    await sendAccountEmail(email, 'Verify your Grand Palate account', `Verify your email by opening: ${verificationUrl}`);
     logSecurity('account_created', request, { email });
-    return response.status(201).json({ message: 'Account created. Check your email to verify it.' });
+    response.status(201).json({ message: 'Account created. Check your email to verify it.' });
+    sendAccountEmail(email, 'Verify your Grand Palate account', `Verify your email by opening: ${verificationUrl}`)
+      .catch((error) => console.error('Verification email failed to send:', error.message));
+    return;
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return response.status(409).json({ error: 'Unable to create account with those details.' });
     logSecurity('account_creation_error', request, { error: error.message });
@@ -209,7 +214,8 @@ app.post('/api/auth/resend-verification', authLimiter, async (request, response)
       await pool.execute('DELETE FROM email_verification_tokens WHERE user_id = ?', [rows[0].id]);
       await pool.execute('INSERT INTO email_verification_tokens (token_hash, user_id, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))', [hashToken(token), rows[0].id]);
       const verificationUrl = `${process.env.PUBLIC_APP_URL || ''}/verify-email?token=${token}`;
-      await sendAccountEmail(email, 'Verify your Grand Palate account', `Verify your email by opening: ${verificationUrl}`);
+      sendAccountEmail(email, 'Verify your Grand Palate account', `Verify your email by opening: ${verificationUrl}`)
+        .catch((error) => console.error('Resend verification email failed to send:', error.message));
     }
   } catch (error) { logSecurity('verification_resend_error', request, { error: error.message }); }
   return response.json(genericResponse);
@@ -224,7 +230,8 @@ app.post('/api/auth/request-password-reset', authLimiter, async (request, respon
     if (rows[0]) {
       const token = newToken();
       await pool.execute('INSERT INTO password_reset_tokens (token_hash, user_id, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))', [hashToken(token), rows[0].id]);
-      await sendAccountEmail(email, 'Reset your Grand Palate password', `Reset your password by opening: ${process.env.PUBLIC_APP_URL || ''}/reset-password?token=${token}`);
+      sendAccountEmail(email, 'Reset your Grand Palate password', `Reset your password by opening: ${process.env.PUBLIC_APP_URL || ''}/reset-password?token=${token}`)
+        .catch((error) => console.error('Password reset email failed to send:', error.message));
     }
   } catch (error) { logSecurity('password_reset_request_error', request, { error: error.message }); }
   return response.json(genericResponse);
