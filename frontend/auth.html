@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Sign In - The Grand Palate</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box} :root{--gold:#c9a84c;--cream:#f2ead7;--ink:#111;--muted:#9e9a90;--line:#383631}
+body{margin:0;min-height:100vh;background:linear-gradient(135deg,#171613,#080808 60%);color:var(--cream);font-family:Jost,sans-serif;display:grid;place-items:center;padding:24px}
+main{width:min(440px,100%);border:1px solid var(--line);background:rgba(18,17,15,.96);padding:42px;box-shadow:0 22px 80px rgba(0,0,0,.45)}
+a{color:var(--gold);text-decoration:none}.brand{font:600 2.1rem 'Cormorant Garamond',serif;color:var(--gold);letter-spacing:1px}.eyebrow{margin:30px 0 8px;color:var(--gold);font-size:.72rem;letter-spacing:3px;text-transform:uppercase}h1{font:600 2.5rem 'Cormorant Garamond',serif;margin:0 0 8px}p{color:var(--muted);line-height:1.6}.tabs{display:flex;border-bottom:1px solid var(--line);margin:28px 0 24px;gap:24px}.tabs button{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);padding:0 0 12px;font:500 .8rem Jost;letter-spacing:1px;text-transform:uppercase;cursor:pointer}.tabs button.active{border-color:var(--gold);color:var(--gold)}label{display:block;margin:16px 0 7px;font-size:.8rem;color:var(--cream)}input{width:100%;padding:13px 14px;border:1px solid var(--line);background:#0d0d0c;color:var(--cream);font:1rem Jost}input:focus{outline:2px solid var(--gold);outline-offset:1px}.submit{width:100%;margin-top:24px;padding:14px;border:0;background:var(--gold);color:#0b0b0a;cursor:pointer;font:500 .8rem Jost;letter-spacing:2px;text-transform:uppercase}.submit:disabled{opacity:.55;cursor:wait}.status{min-height:24px;margin:16px 0 0;font-size:.9rem}.links{display:flex;justify-content:space-between;margin-top:24px;font-size:.85rem}.hidden{display:none}
+</style>
+</head>
+<body>
+<main>
+  <a class="brand" href="index.html">The Grand Palate</a>
+  <div class="eyebrow">Private access</div>
+  <h1 id="title">Sign in</h1>
+  <p id="intro">Access your account with your verified email address.</p>
+  <div class="tabs" role="tablist" aria-label="Account actions">
+    <button class="active" type="button" data-mode="login">Sign in</button>
+    <button type="button" data-mode="register">Create account</button>
+  </div>
+  <form id="auth-form">
+    <label for="email">Email address</label>
+    <input id="email" name="email" type="email" autocomplete="username" required maxlength="254">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required minlength="12" maxlength="128">
+    <button class="submit" type="submit">Continue securely</button>
+  </form>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+  <div class="links"><a href="index.html">Return to site</a><a href="/reset-password">Forgot password?</a></div>
+</main>
+<script src="auth.js"></script>
+</body>
+</html>

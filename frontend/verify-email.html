@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Email - The Grand Palate</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#10100f;color:#f2ead7;font:16px Arial,sans-serif;padding:24px}main{max-width:480px;text-align:center;border:1px solid #383631;background:#181715;padding:42px}h1{color:#c9a84c;font:600 2.5rem Georgia,serif}p{color:#bbb;line-height:1.6}a{color:#c9a84c}
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Verifying your email...</h1>
+  <p id="message">Please wait.</p>
+  <a id="login" href="/" hidden>Return to the site</a>
+</main>
+<script>
+const title = document.querySelector('#title');
+const message = document.querySelector('#message');
+const login = document.querySelector('#login');
+const token = new URLSearchParams(window.location.search).get('token');
+if (!token) {
+  title.textContent = 'Invalid link';
+  message.textContent = 'This verification link is missing its token.';
+  login.hidden = false;
+} else {
+  fetch('/api/auth/verify-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ token }) })
+    .then(async (response) => {
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Verification failed.');
+      title.textContent = 'Email verified';
+      message.textContent = result.message;
+      login.hidden = false;
+    })
+    .catch((error) => {
+      title.textContent = 'Verification failed';
+      message.textContent = error.message;
+      login.hidden = false;
+    });
+}
+</script>
+</body>
+</html>

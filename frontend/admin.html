@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - The Grand Palate</title>
+<style>
+body{margin:0;min-height:100vh;background:#10100f;color:#eee;font:16px Georgia,serif;display:grid;place-items:center;padding:24px}main{max-width:560px;width:100%;border:1px solid #383631;padding:40px;background:#181715}h1{color:#c9a84c;font-weight:500}p{font:15px Arial,sans-serif;color:#bbb;line-height:1.6}button{padding:12px 18px;background:#c9a84c;border:0;cursor:pointer;font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <h1>Admin console</h1>
+  <p id="status">Verifying administrator session...</p>
+  <button id="logout" type="button" hidden>Sign out</button>
+</main>
+<script>
+const status = document.querySelector('#status');
+const logout = document.querySelector('#logout');
+fetch('/api/admin/status', { credentials: 'same-origin' }).then(async (response) => {
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Access denied.');
+  status.textContent = `Signed in as ${result.email}. Administrator access verified.`;
+  logout.hidden = false;
+}).catch((error) => {
+  status.textContent = error.message;
+  setTimeout(() => window.location.assign('/auth.html'), 1200);
+});
+logout.addEventListener('click', async () => {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+  window.location.assign('/auth.html');
+});
+</script>
+</body>
+</html>
